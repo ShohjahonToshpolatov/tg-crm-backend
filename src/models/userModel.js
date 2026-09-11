@@ -1,4 +1,4 @@
-import pool from "../config/db.js";
+import { pool } from "../config/db.js";
 
 async function findUserByTelegramId(telegramId) {
   const result = await pool.query("SELECT * FROM bots WHERE telegram_id = $1", [

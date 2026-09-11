@@ -1,4 +1,4 @@
-import { findUserByTelegramId } from "../config/db.js";
+import { findUserByTelegramId } from "../models/userModel.js";
 import { startRegister } from "./register.js";
 
 async function handleStart(ctx) {

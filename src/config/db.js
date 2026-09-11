@@ -13,3 +13,5 @@ const pool = new Pool({
 pool.on("error", (err) => {
   console.error("PostgreSQL pool xatosi", err.message);
 });
+
+export { pool };

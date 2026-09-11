@@ -1,61 +1,37 @@
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import { findUserByEmail } from "../models/userModel.js";
+import { generateAccessToken, generateRefreshToken } from "../helpers/jwt.js";
 
 async function loginAdmin(req, res) {
-  const { email, password } = req.body;
-
   try {
-    if (!email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: "Email va parolni kiritish majburiy",
-      });
+    const { email, password } = req.body;
+
+    if (
+      email === process.env.ADMIN_EMAIL &&
+      password === process.env.ADMIN_PASSWORD
+    ) {
+      const accessToken = generateAccessToken({ email, role: "admin" });
+      const refreshToken = generateRefreshToken({ email, role: "admin" });
+      return res.json({ accessToken, refreshToken });
     }
 
     const user = await findUserByEmail(email);
-
-    if (!user || !user.password) {
-      return res.status(401).json({
-        success: false,
-        message: "Email yoki parol noto'g'ri",
-      });
+    if (!user || user.role !== "admin") {
+      return res.status(403).json({ message: "Email yoki parol noto'g'ri" });
     }
 
-    if (user.role !== "admin") {
-      return res.status(403).json({
-        success: false,
-        message: "Sizda admin paneliga kirish huquqi yo'q",
-      });
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Email yoki parol noto'g'ri" });
     }
 
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    const accessToken = generateAccessToken({ id: user.id, role: user.role });
+    const refreshToken = generateRefreshToken({ id: user.id, role: user.role });
 
-    if (!isPasswordValid) {
-      return res.status(401).json({
-        success: false,
-        message: "Email yoki parol noto'g'ri",
-      });
-    }
-
-    const payload = { id: user.id, email: user.email, role: user.role };
-    const accessToken = jwt.sign(payload, process.env.JWT_SECRET, {
-      expiresIn: "15m",
-    });
-    const refreshToken = jwt.sign(payload, process.env.JWT_REFRESH_SECRET, {
-      expiresIn: "7d",
-    });
-
-    return res.status(200).json({
-      success: true,
-      accessToken,
-      refreshToken,
-    });
+    res.json({ accessToken, refreshToken });
   } catch (err) {
-    return res.status(500).json({
-      success: false,
-      message: err.message,
-    });
+    res.status(500).json({ message: "Server xatosi", error: err.message });
   }
 }
 
